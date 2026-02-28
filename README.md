@@ -101,5 +101,4 @@ python run.py
 6. Click **✅ Clear / Reset** to demonstrate the system's rapid recovery tracking.
 
 ---
-**Prepared specifically for the ARSII Carthage Hackathon.**
-`<carthage@arsii.org>`
+
