@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TWINFORGE-X — Industrial Risk Intelligence &amp; Digital Twin</title>
+    <meta name="description" content="TwinForge-X: AI-Powered Industrial Risk Prevention &amp; Emergency Intelligence Digital Twin.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+
+<body>
+
+    <!-- TOOLTIP (follows mouse on SVG nodes) -->
+    <div class="tooltip" id="tt">
+        <div class="tooltip-title" id="tt-name">—</div>
+        <div class="tooltip-row"><span>Statut</span><span class="tooltip-val" id="tt-status">—</span></div>
+        <div class="tooltip-row"><span>Rendement</span><span class="tooltip-val" id="tt-yield">—</span></div>
+        <div class="tooltip-row"><span>Énergie</span><span class="tooltip-val" id="tt-energy">—</span></div>
+        <div class="tooltip-row"><span>Eau</span><span class="tooltip-val" id="tt-water">—</span></div>
+        <div class="tooltip-row"><span>Durée de vie</span><span class="tooltip-val" id="tt-life">—</span></div>
+        <div class="tooltip-row"><span>Dernier log</span><span class="tooltip-val" id="tt-log">—</span></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════ -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="logo-hex"></div>
+            <div class="logo-text-wrap">
+                <div class="logo-title">TWINFORGE<span style="color:#ff2d55;font-size:.6em;vertical-align:super;letter-spacing:.04em">-X</span></div>
+                <div class="logo-sub">🛡 Risk Intelligence · 4-Agent Architecture · SMIA</div>
+            </div>
+        </div>
+
+        <nav class="nav-tabs" id="twin-tabs">
+            <button class="tab active" data-view="overview">
+                <span class="tab-ico">◉</span> Vue globale
+                <span class="badge" id="badge-overview">0</span>
+            </button>
+            <button class="tab" data-view="component">
+                <span class="tab-ico">⚙</span> Component Twin
+                <span class="badge" id="badge-component">0</span>
+            </button>
+            <button class="tab" data-view="asset">
+                <span class="tab-ico">🏭</span> Asset Twin
+                <span class="badge" id="badge-asset">0</span>
+            </button>
+            <button class="tab" data-view="system">
+                <span class="tab-ico">🔗</span> System Twin
+                <span class="badge" id="badge-system">0</span>
+            </button>
+            <button class="tab" data-view="process">
+                <span class="tab-ico">📊</span> Process Twin
+                <span class="badge" id="badge-process">0</span>
+            </button>
+            <button class="tab" data-view="twin3d">
+                <span class="tab-ico">◈</span> 3D
+                <span class="badge" id="badge-twin3d">0</span>
+            </button>
+            <button class="tab tab-risk" data-view="risk">
+                <span class="tab-ico">🛡</span> Risk Intel
+                <span class="badge badge-risk" id="badge-risk">!</span>
+            </button>
+        </nav>
+
+        <div class="topbar-right">
+            <button class="theme-btn" id="theme-toggle" title="Dark / Light">🌗</button>
+            <div class="live-indicator">
+                <span class="live-dot" id="live-dot"></span>
+                <span>SMIA LIVE</span>
+            </div>
+            <div class="clock" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+
+        <!-- ─── EMPTY STATE ─── -->
+        <section class="view" id="view-empty">
+            <div class="empty-state">
+                <div class="empty-hex">⬡</div>
+                <h2>No Digital Twins Yet</h2>
+                <p>Create manufacturing digital twins using the SMIA Agent chat interface.</p>
+                <button class="btn-accent" id="btn-open-chat-empty">💬 Open Chat</button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- VUE GLOBALE                               -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-overview">
+
+            <!-- Twin-level shortcut cards -->
+            <div class="level-cards">
+                <div class="lv-card" style="--accent:#00d4ff">
+                    <div class="lv-bar"></div>
+                    <div class="lv-body">
+                        <span class="lv-tag">Niveau 1</span>
+                        <strong class="lv-name">Component Twin</strong>
+                        <span class="lv-count" id="lv-component">0 composants</span>
+                    </div>
+                    <span class="lv-icon">⚙️</span>
+                </div>
+                <div class="lv-card" style="--accent:#00ff9d">
+                    <div class="lv-bar"></div>
+                    <div class="lv-body">
+                        <span class="lv-tag">Niveau 2</span>
+                        <strong class="lv-name">Asset Twin</strong>
+                        <span class="lv-count" id="lv-asset">0 machines</span>
+                    </div>
+                    <span class="lv-icon">🏭</span>
+                </div>
+                <div class="lv-card" style="--accent:#a259ff">
+                    <div class="lv-bar"></div>
+                    <div class="lv-body">
+                        <span class="lv-tag">Niveau 3</span>
+                        <strong class="lv-name">System Twin</strong>
+                        <span class="lv-count" id="lv-system">0 lignes</span>
+                    </div>
+                    <span class="lv-icon">🔗</span>
+                </div>
+                <div class="lv-card" style="--accent:#ff6b35">
+                    <div class="lv-bar"></div>
+                    <div class="lv-body">
+                        <span class="lv-tag">Niveau 4</span>
+                        <strong class="lv-name">Process Twin</strong>
+                        <span class="lv-count" id="lv-process">0 flux</span>
+                    </div>
+                    <span class="lv-icon">📊</span>
+                </div>
+            </div>
+
+            <!-- 3-col: KPIs | Factory SVG | Alerts + Logs -->
+            <div class="row-3col">
+                <!-- LEFT: KPI sidebar -->
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <span class="panel-title">Indicateurs Clés</span>
+                        <span class="panel-badge">TEMPS RÉEL</span>
+                    </div>
+                    <div class="kpi-list" id="kpi-list">
+                        <div class="kpi-loading">Loading data…</div>
+                    </div>
+                </div>
+
+                <!-- CENTER: Factory SVG -->
+                <div class="panel" style="display:flex;flex-direction:column;min-height:520px;">
+                    <div class="panel-hdr">
+                        <span class="panel-title">Vue Usine — Étage <span id="currentFloor">1</span>/4</span>
+                        <span class="panel-badge" id="factoryStatus">MACHINES</span>
+                    </div>
+                    <div class="factory-canvas" id="factory-svg">
+                        <!-- SVG is rendered by app.js renderFactorySVG() -->
+                    </div>
+                    <div style="display:flex;gap:.4rem;padding:.5rem .75rem;border-top:1px solid var(--border);">
+                        <span
+                            style="font-size:.65rem;color:var(--tx2);align-self:center;margin-right:.25rem">ÉTAGE:</span>
+                        <button class="floor-btn active" data-floor="1">RDC</button>
+                        <button class="floor-btn" data-floor="2">Étage 1</button>
+                        <button class="floor-btn" data-floor="3">Étage 2</button>
+                        <button class="floor-btn" data-floor="4">Toit</button>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Alerts + Logs + MOE/MOS -->
+                <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                    <div class="panel">
+                        <div class="panel-hdr">
+                            <span class="panel-title">Alertes SMIA</span>
+                            <span class="panel-badge tag-danger" id="alert-count">0 ACTIVES</span>
+                        </div>
+                        <div class="alert-list" id="alert-list">
+                            <div class="kpi-loading">No alerts</div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-hdr">
+                            <span class="panel-title">Log Stream</span>
+                            <span class="panel-badge">AAS MSGS</span>
+                        </div>
+                        <div class="log-stream" id="log-stream"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-hdr"><span class="panel-title">MOE / MOS</span></div>
+                        <div class="moe-grid">
+                            <div class="moe-box" style="--c:#00d4ff">
+                                <div class="moe-val">24</div>
+                                <div class="moe-lbl">MOE — Présents</div>
+                            </div>
+                            <div class="moe-box" style="--c:#a259ff">
+                                <div class="moe-val">8</div>
+                                <div class="moe-lbl">MOS — Superviseurs</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom 4-col -->
+            <div class="row-4col">
+                <!-- OEE Gauge -->
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">OEE Global</span></div>
+                    <div class="oee-wrap">
+                        <svg viewBox="0 0 120 70" style="width:130px;height:75px;">
+                            <path d="M10 65 A50 50 0 0 1 110 65" fill="none" stroke="var(--border)" stroke-width="10"
+                                stroke-linecap="round" />
+                            <path id="oee-arc" d="M10 65 A50 50 0 0 1 110 65" fill="none" stroke="var(--c1)"
+                                stroke-width="10" stroke-linecap="round" stroke-dasharray="157"
+                                stroke-dashoffset="20" />
+                            <text id="oee-val" x="60" y="57" text-anchor="middle" fill="var(--c1)" font-size="14"
+                                font-weight="bold" font-family="monospace">0%</text>
+                        </svg>
+                        <div style="font-size:.62rem;color:var(--tx2);letter-spacing:.08em">RENDEMENT GLOBAL</div>
+                        <div style="width:100%;display:flex;flex-direction:column;gap:.3rem;" id="oee-bars"></div>
+                    </div>
+                </div>
+                <!-- Energy -->
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Énergie / Machine</span></div>
+                    <div class="chart-bars" id="energy-bars">
+                        <div class="kpi-loading">No data</div>
+                    </div>
+                </div>
+                <!-- Lifetime -->
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Durée de Vie Restante</span></div>
+                    <div class="lifetime-panel" id="lifetimePanel">
+                        <div class="kpi-loading">—</div>
+                    </div>
+                </div>
+                <!-- Consumption -->
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Consommation 24h</span></div>
+                    <div style="padding:1rem;display:flex;flex-direction:column;gap:.7rem;" id="consumptionPanel">
+                        <div class="kpi-loading">—</div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- COMPONENT TWIN                            -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-component">
+            <div class="view-head">
+                <div>
+                    <h2 class="view-title">⚙️ Component Twin — Niveau 1</h2>
+                    <p class="view-sub">Surveillance individuelle de chaque composant physique via AAS Submodel</p>
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <span class="panel-badge" id="comp-total">0 COMPOSANTS</span>
+                    <span class="panel-badge tag-danger">0 ALERTES</span>
+                </div>
+            </div>
+
+            <div class="g2">
+                <!-- Filter + Search -->
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Filtres & Statut</span></div>
+                    <div style="padding:1rem;display:flex;flex-direction:column;gap:.75rem;" id="comp-filters">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <!-- Component Cards -->
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <span class="panel-title">Composants — Vue détaillée</span>
+                        <span class="panel-badge">OPC-UA · MQTT</span>
+                    </div>
+                    <div class="comp-cards" id="comp-cards">
+                        <div class="kpi-loading">No components — create twins first</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Component Table -->
+            <div class="panel">
+                <div class="panel-hdr">
+                    <span class="panel-title">Table des composants — Données AAS</span>
+                    <span class="panel-badge">SUBMODEL: TechnicalData</span>
+                </div>
+                <div class="tbl-wrap">
+                    <table class="dtable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Composant</th>
+                                <th>Machine Parent</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Énergie (W)</th>
+                                <th>Temp. (°C)</th>
+                                <th>Vibration</th>
+                                <th>Durée vie</th>
+                                <th>Cycles</th>
+                                <th>Dernier log</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comp-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- ASSET TWIN                                -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-asset">
+            <div class="view-head">
+                <div>
+                    <h2 class="view-title">🏭 Asset Twin — Niveau 2</h2>
+                    <p class="view-sub">Surveillance complète de chaque machine · KPI Engine · Détection de pannes</p>
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <span class="panel-badge" id="asset-total">0 ASSETS</span>
+                    <span class="panel-badge"
+                        style="background:rgba(0,255,157,.1);color:var(--c2);border-color:rgba(0,255,157,.3);"
+                        id="asset-online">0 ONLINE</span>
+                </div>
+            </div>
+
+            <div class="row-4col" id="asset-kpi-row">
+                <!-- OEE, Energy, Water, Health panels — populated by JS -->
+            </div>
+
+            <!-- Asset Table -->
+            <div class="panel">
+                <div class="panel-hdr">
+                    <span class="panel-title">Tableau Assets — Toutes Machines</span>
+                    <span class="panel-badge">FIPA-ACL · KPI ENGINE</span>
+                </div>
+                <div class="tbl-wrap">
+                    <table class="dtable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Machine</th>
+                                <th>Type</th>
+                                <th>Étage</th>
+                                <th>Statut</th>
+                                <th>Rendement</th>
+                                <th>Énergie kWh</th>
+                                <th>Eau L/h</th>
+                                <th>Durée vie</th>
+                                <th>Pannes/mois</th>
+                                <th>Dernière maint.</th>
+                                <th>Agent SMIA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="asset-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Maintenance Planning + Fault History -->
+            <div class="g2">
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Planning Maintenance Préventive</span></div>
+                    <div class="gantt-wrap" id="ganttWrap"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Historique Pannes (30 jours)</span></div>
+                    <div style="padding:1rem;display:flex;flex-direction:column;gap:.5rem;" id="faultHistory"></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- SYSTEM TWIN                               -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-system">
+            <div class="view-head">
+                <div>
+                    <h2 class="view-title">🔗 System Twin — Niveau 3</h2>
+                    <p class="view-sub">Lignes de production · Topologie multi-étages · Coordination inter-agents SMIA
+                    </p>
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <span class="panel-badge">4 LIGNES</span>
+                    <span class="panel-badge">3 ÉTAGES + RDC</span>
+                </div>
+            </div>
+
+            <!-- System KPIs -->
+            <div class="row-4col" id="system-kpi-row">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Production Lines -->
+            <div class="panel">
+                <div class="panel-hdr">
+                    <span class="panel-title">Lignes de Production — Vue Système</span>
+                    <span class="panel-badge">MULTI-AGENT COORDINATION</span>
+                </div>
+                <div class="production-lines" id="productionLines"></div>
+            </div>
+
+            <!-- Topology + Logs -->
+            <div class="g2">
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <span class="panel-title">Topologie Multi-Étages</span>
+                        <span class="panel-badge">JADE · SPADE</span>
+                    </div>
+                    <svg class="topo-svg" id="topoSvg" viewBox="0 0 600 280"></svg>
+                </div>
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Communication Inter-Agents SMIA</span></div>
+                    <div class="log-stream" id="system-log-stream" style="max-height:240px;"></div>
+                </div>
+            </div>
+
+            <!-- Floor Consumption -->
+            <div class="panel">
+                <div class="panel-hdr"><span class="panel-title">Consommation Énergie & Eau par Étage</span></div>
+                <div style="padding:1rem;display:flex;flex-direction:column;gap:.75rem;" id="floorConsumption"></div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- PROCESS TWIN                              -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-process">
+            <div class="view-head">
+                <div>
+                    <h2 class="view-title">📊 Process Twin — Niveau 4</h2>
+                    <p class="view-sub">Flux de fabrication · BPMN · Scheduling MOE/MOS · Ordres de production</p>
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <span class="panel-badge">12 FLUX ACTIFS</span>
+                    <span class="panel-badge"
+                        style="background:rgba(255,107,53,.1);color:var(--c4);border-color:rgba(255,107,53,.3)">BPMN
+                        ENGINE</span>
+                </div>
+            </div>
+
+            <!-- Process KPIs -->
+            <div class="row-4col" id="process-kpi-row">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- BPMN Flow -->
+            <div class="panel">
+                <div class="panel-hdr">
+                    <span class="panel-title">Agent Action Trace (BPMN)</span>
+                    <span class="panel-badge" id="bpmn-progress">EN COURS</span>
+                </div>
+                <div class="bpmn-flow" id="bpmn-flow">
+                    <div class="kpi-loading">No actions recorded</div>
+                </div>
+            </div>
+
+            <!-- Orders + Worker Schedule -->
+            <div class="g2">
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Ordres de Fabrication</span></div>
+                    <div class="tbl-wrap">
+                        <table class="dtable">
+                            <thead>
+                                <tr>
+                                    <th>OF</th>
+                                    <th>Produit</th>
+                                    <th>Qté</th>
+                                    <th>Priorité</th>
+                                    <th>Statut</th>
+                                    <th>Ligne</th>
+                                    <th>MOE</th>
+                                    <th>Début</th>
+                                    <th>Fin est.</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-hdr"><span class="panel-title">Planning MOE / MOS</span></div>
+                    <div style="padding:1rem;display:flex;flex-direction:column;gap:.6rem;" id="workerSchedule"></div>
+                </div>
+            </div>
+
+            <!-- Process Consumption -->
+            <div class="panel">
+                <div class="panel-hdr">
+                    <span class="panel-title">Consommation par Processus (kWh + L/h)</span>
+                    <span class="panel-badge">MES INTEGRATION</span>
+                </div>
+                <div style="padding:1rem;display:flex;flex-direction:column;gap:.6rem;" id="processConsumption"></div>
+            </div>
+        </section>
+
+
+        <!-- ─── 3D TWIN ─── -->
+        <section class="view" id="view-twin3d">
+            <div class="three-wrap">
+                <canvas id="three-canvas"></canvas>
+                <div class="view3d-toolbar" id="view3d-toolbar">
+                    <button class="view3d-btn active" data-mode="exterior" title="Exterior">🏗️</button>
+                    <button class="view3d-btn" data-mode="cutaway" title="Cutaway">✂️</button>
+                    <button class="view3d-btn" data-mode="exploded" title="Exploded">💥</button>
+                    <button class="view3d-btn" data-mode="blueprint" title="Blueprint">📐</button>
+                    <button class="view3d-btn" data-mode="heatmap" title="Heatmap">🌡️</button>
+                </div>
+                <div class="hud-stats" id="hud-stats"></div>
+                <div class="hud-info" id="hud-info"></div>
+                <button class="view3d-refresh" id="btn-refresh-3d" title="Refresh">🔄</button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- RISK INTELLIGENCE (TWINFORGE-X)          -->
+        <!-- ══════════════════════════════════════════ -->
+        <section class="view" id="view-risk">
+            <!-- Built dynamically by risk.js -->
+            <div style="padding:3rem;color:#aaa;text-align:center">Initialising Risk Intelligence Engine…</div>
+        </section>
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════
+     CHAT DRAWER
+     ═══════════════════════════════════════════════════════ -->
+    <button class="chat-fab" id="chat-fab">💬</button>
+
+    <aside class="chat-drawer" id="chat-drawer">
+        <div class="chat-hdr">
+            <span>TWINFORGE Agent</span>
+            <button class="chat-close" id="chat-close">✕</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="msg bot">
+                <strong>TWINFORGE</strong><br>
+                Ready. Create digital twins by describing your machines.<br>
+                <em>Example: "Create a CNC machine twin on floor 1, line A, 45 kWh, 3 spindles"</em>
+            </div>
+        </div>
+        <div class="chat-quick" id="chat-quick">
+            <button class="qbtn" data-msg="List all twins">📋 List</button>
+            <button class="qbtn" data-msg="Show me the KPIs">📊 KPIs</button>
+            <button class="qbtn" data-msg="Are there any alerts?">🚨 Alerts</button>
+        </div>
+        <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Describe a machine…" autocomplete="off">
+            <button id="chat-send">▶</button>
+        </div>
+    </aside>
+
+    <!-- ═══ Three.js CDN ═══ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/Pass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="static/twin3d.js"></script>
+    <script src="static/risk.js"></script>
+    <script src="static/app.js"></script>
+
+    <!-- Theme Toggle -->
+    <script>
+        (() => {
+            const t = document.getElementById('theme-toggle'), r = document.documentElement;
+            const s = localStorage.getItem('tf-theme');
+            if (s === 'light') r.classList.add('light');
+            t.addEventListener('click', () => {
+                r.classList.toggle('light');
+                const l = r.classList.contains('light');
+                localStorage.setItem('tf-theme', l ? 'light' : 'dark');
+                t.textContent = l ? '🌙' : '🌗';
+            });
+            if (s === 'light') t.textContent = '🌙';
+        })();
+    </script>
+</body>
+
+</html>

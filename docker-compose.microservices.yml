@@ -1,0 +1,290 @@
+services:
+  # ══════════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ══════════════════════════════════════════════════════════════════════════
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass "${REDIS_PASSWORD:-twinforge_redis_secret}"
+    expose:
+      - "6379"
+    networks:
+      - internal
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-twinforge_redis_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./twinforge/services/agent-data-iot/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    expose:
+      - "1883"
+    networks:
+      - internal
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /mosquitto/data
+      - /mosquitto/log
+    security_opt:
+      - no-new-privileges:true
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CORE SERVICES (auth + frontend + dashboard)
+  # ══════════════════════════════════════════════════════════════════════════
+
+  auth-backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./Backend/.env
+    environment:
+      AUTH_DB_PATH: /data/auth.db
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:18080}
+      APP_ORIGINS: ${APP_ORIGINS:-http://localhost:18080}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:18080/dashboard/}
+      NODE_ENV: production
+    volumes:
+      - auth-data:/data
+    expose:
+      - "5000"
+    networks:
+      - edge      # needs internet access to send OTP emails via Resend API
+      - internal  # inter-service communication with frontend/dashboard
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  auth-frontend:
+    build:
+      context: ./Frontend/vite-project
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_DASHBOARD_URL: ${VITE_DASHBOARD_URL:-http://localhost:18080/dashboard}
+    depends_on:
+      auth-backend:
+        condition: service_healthy
+    ports:
+      - "18080:80"
+    networks:
+      - edge
+      - internal
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  twinforge-dashboard:
+    build:
+      context: ./twinforge/services/Convesation_and_orchestrator_agents
+      dockerfile: Dockerfile
+    env_file:
+      - ./twinforge/services/Convesation_and_orchestrator_agents/.env
+    environment:
+      AUTH_BACKEND_URL: http://auth-backend:5000
+      AUTH_LOGIN_URL: ${AUTH_LOGIN_URL:-http://localhost:18080}
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-twinforge_redis_secret}@redis:6379"
+      MESSAGE_SIGNING_KEY: "${MESSAGE_SIGNING_KEY:-twinforge_hmac_default_key_change_in_prod}"
+    depends_on:
+      auth-backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8001"
+      - "8002"
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8001/health', timeout=3).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # AGENTS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  agent-data-iot:
+    build:
+      context: ./twinforge/services/agent-data-iot
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-twinforge_redis_secret}@redis:6379"
+      MQTT_BROKER_HOST: mosquitto
+      MQTT_BROKER_PORT: "1883"
+      SECURITY_AGENT_URL: http://agent-security:8005
+      MESSAGE_SIGNING_KEY: "${MESSAGE_SIGNING_KEY:-twinforge_hmac_default_key_change_in_prod}"
+      AGENT_ID: agent_3
+      SERVICE_PORT: "8003"
+      LOG_LEVEL: INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    expose:
+      - "8003"
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  agent-verifier:
+    build:
+      context: ./twinforge/services/agent-verifier
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-twinforge_redis_secret}@redis:6379"
+      SECURITY_AGENT_URL: http://agent-security:8005
+      MESSAGE_SIGNING_KEY: "${MESSAGE_SIGNING_KEY:-twinforge_hmac_default_key_change_in_prod}"
+      AGENT_ID: agent_4
+      PORT: "8004"
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "8004"
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8004/health', timeout=3).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  agent-security:
+    build:
+      context: ./twinforge/services/agent-security
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-twinforge_redis_secret}@redis:6379"
+      MESSAGE_SIGNING_KEY: "${MESSAGE_SIGNING_KEY:-twinforge_hmac_default_key_change_in_prod}"
+      AGENT_ID: agent_5
+      PORT: "8005"
+      LOCKDOWN_ENABLED: "true"
+      ALLOWED_IPS: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1"
+      AGENT_URLS: "agent_1=http://twinforge-dashboard:8001,agent_2=http://twinforge-dashboard:8002,agent_3=http://agent-data-iot:8003,agent_4=http://agent-verifier:8004"
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "8005"
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8005/health', timeout=3).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # SUPPORT SERVICES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  mcp-mock-server:
+    build:
+      context: ./twinforge/services/mcp-mock-server
+      dockerfile: Dockerfile
+    expose:
+      - "9001"
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:9001/health', timeout=3).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  dataset-replay:
+    build:
+      context: ./twinforge/services/dataset-replay
+      dockerfile: Dockerfile
+    environment:
+      AGENT_DATA_IOT_URL: http://agent-data-iot:8003
+      REPLAY_SPEED: "${REPLAY_SPEED:-1.0}"
+      REPLAY_INTERVAL_SEC: "2.0"
+      BATCH_SIZE: "5"
+    depends_on:
+      agent-data-iot:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # AZURE DEPLOYMENT (replaces Cloudflare tunnel)
+  # ══════════════════════════════════════════════════════════════════════════
+  # To deploy to Azure Container Apps, use:
+  #   docker compose --profile azure up -d
+  #
+  # Requires:
+  #   AZURE_RESOURCE_GROUP, AZURE_CONTAINER_APP_ENV set in .env
+  #   az login + az containerapp up (see deploy/azure/README.md)
+
+volumes:
+  auth-data:
+  redis-data:
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true

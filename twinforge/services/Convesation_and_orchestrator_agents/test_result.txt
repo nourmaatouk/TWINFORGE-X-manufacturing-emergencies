@@ -1,0 +1,88 @@
+﻿python : C:\Users\USE
+R\AppData\Local\Packa
+ges\PythonSoftwareFou
+ndation.Python.3.8_qb
+z5n2kfra8p0\LocalCach
+e\local-packages\Pyth
+on38\site-packages\go
+ogle\api_core\_python
+_version_support.py:2
+46: FutureWarning: 
+You are using a 
+non-supported Python 
+version (3.8.10). 
+Google will not post 
+any further updates 
+to google.api_core 
+supporting this 
+Python version. 
+Please upgrade to 
+the latest Python 
+version, or at least 
+Python 3.10, and 
+then update 
+google.api_core.
+At line:1 char:32
++ $env:PYTHONIOENCODI
+NG='utf-8'; python 
+test_smoke.py 2>&1 | 
+Out-File - ...
++                    
+            ~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (C:\User   
+ s\USER\A...oogle    
+.api_core.:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  warnings.warn(messa
+ge, FutureWarning)
+Gemini init failed: 
+module 'google.genera
+tiveai' has no 
+attribute 
+'GenerativeModel'. 
+Using rules.
+=== TWINFORGE SMOKE TEST ===
+[1] Importing modules...
+  OK: imports done
+[2] Getting settings...
+  OK: gemini_key present = True
+  OK: data_dir = C:\Users\USER\Desktop\week 3 digital twin\data
+[3] Creating graph...
+  OK: graph created
+[4] Running CREATE_TWIN...
+  Intent: CREATE_TWIN
+  Confidence: 0.8
+  Twin ID: CNC-01
+  OEE: 81.0
+  Alerts: 0
+  Response: Ô£à Digital Twin **CNC-01** created on Floor 2, Line A. Asset-level twin. OEE baseline: **81.0%**. Energy model: 0.0 kWh/h. Sensor monitoring active.
+[5] Running LIST_TWINS...
+  Response: ­ƒôï **Active Digital Twins**
+
+| Twin ID | Type | Level | Floor | OEE | Alerts |
+|---------|------|-------|-------|-----|--------|
+| CNC-01 | CNC | Asset | 2 | 81.0% | ­ƒƒó 0 |
+
+Total twins: **1**
+[6] Running GET_KPI...
+  Response: ­ƒôè KPIs for **CNC-01**
+
+| Metric | Value |
+|--------|-------|
+| **OEE** | **82.6%** |
+| Availability | 95.7% |
+| Performance | 90.6% |
+| Quality | 95.3% |
+| Energy | 43.8 kWh |
+| Cycle Time | 121.5s |
+
+
+=== ALL TESTS PASSED ===

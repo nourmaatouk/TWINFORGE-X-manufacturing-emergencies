@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+test_output.txt
+test_result.txt
+test_results*.txt
+verify_log.txt

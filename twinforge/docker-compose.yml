@@ -1,0 +1,361 @@
+version: "3.9"
+
+services:
+  # ============================================================
+  # Agent Services
+  # ============================================================
+
+  agent-conversation:
+    build: ./services/agent-conversation
+    ports:
+      - "8001:8001"
+    environment:
+      - AGENT_NAME=agent-conversation
+      - AGENT_ID=agent_1
+      - PORT=8001
+      - REDIS_URL=redis://redis:6379
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SECURITY_AGENT_URL=http://agent-security:8005
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - vault
+      - agent-security
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  agent-orchestrator:
+    build: ./services/agent-orchestrator
+    ports:
+      - "8002:8002"
+    environment:
+      - AGENT_NAME=agent-orchestrator
+      - AGENT_ID=agent_2
+      - PORT=8002
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://twinforge:${POSTGRES_PASSWORD}@postgres:5432/twinforge
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SECURITY_AGENT_URL=http://agent-security:8005
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - postgres
+      - vault
+      - agent-security
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  agent-data-iot:
+    build: ./services/agent-data-iot
+    ports:
+      - "8003:8003"
+    environment:
+      - AGENT_NAME=agent-data-iot
+      - AGENT_ID=agent_3
+      - PORT=8003
+      - REDIS_URL=redis://redis:6379
+      - INFLUX_URL=http://influxdb:8086
+      - OPCUA_ENDPOINT=opc.tcp://opcua-simulator:4840
+      - MQTT_BROKER=mqtt-simulator:1883
+      - MCP_SERVERS=http://mcp-mock-server:9001
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SECURITY_AGENT_URL=http://agent-security:8005
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - influxdb
+      - vault
+      - agent-security
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  agent-verifier:
+    build: ./services/agent-verifier
+    ports:
+      - "8004:8004"
+    environment:
+      - AGENT_NAME=agent-verifier
+      - AGENT_ID=agent_4
+      - PORT=8004
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://twinforge:${POSTGRES_PASSWORD}@postgres:5432/twinforge
+      - INFLUX_URL=http://influxdb:8086
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SECURITY_AGENT_URL=http://agent-security:8005
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - postgres
+      - influxdb
+      - agent-security
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  agent-security:
+    build: ./services/agent-security
+    ports:
+      - "8005:8005"
+    environment:
+      - AGENT_NAME=agent-security
+      - AGENT_ID=agent_5
+      - PORT=8005
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://twinforge:${POSTGRES_PASSWORD}@postgres:5432/twinforge_security
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SECURITY_AGENT_URL=http://agent-security:8005
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - ALERT_WEBHOOK_URL=${PAGERDUTY_WEBHOOK}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - postgres
+      - vault
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  # ============================================================
+  # Orchestration Services
+  # ============================================================
+
+  langgraph-orchestrator:
+    build: ./services/langgraph-orchestrator
+    ports:
+      - "8000:8000"
+    environment:
+      - AGENT_NAME=langgraph-orchestrator
+      - AGENT_ID=orchestrator
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - AGENT_1_URL=http://agent-conversation:8001
+      - AGENT_2_URL=http://agent-orchestrator:8002
+      - AGENT_3_URL=http://agent-data-iot:8003
+      - AGENT_4_URL=http://agent-verifier:8004
+      - AGENT_5_URL=http://agent-security:8005
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - MESSAGE_SIGNING_KEY=${MESSAGE_SIGNING_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - redis
+      - agent-conversation
+      - agent-orchestrator
+      - agent-data-iot
+      - agent-verifier
+      - agent-security
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  # ============================================================
+  # Simulation Layer
+  # ============================================================
+
+  dataset-replay:
+    build: ./services/dataset-replay
+    environment:
+      - DATASET_DIR=/datasets
+      - OPCUA_TARGET=opc.tcp://opcua-simulator:4840
+      - MQTT_BROKER=mqtt-simulator:1883
+      - REPLAY_SPEED=1.0
+    volumes:
+      - ./datasets:/datasets
+    depends_on:
+      - opcua-simulator
+      - mqtt-simulator
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  mcp-mock-server:
+    build: ./services/mcp-mock-server
+    ports:
+      - "9001:9001"
+    environment:
+      - DATASET_DIR=/datasets
+    volumes:
+      - ./datasets:/datasets
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  opcua-simulator:
+    image: mcr.microsoft.com/iotedge/opc-plc:latest
+    ports:
+      - "4840:50000"
+    volumes:
+      - ./infrastructure/simulators/opcua-config.xml:/config/server.xml
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  mqtt-simulator:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infrastructure/simulators/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  # ============================================================
+  # Data Layer
+  # ============================================================
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=twinforge
+      - POSTGRES_USER=twinforge
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./infrastructure/postgres/pgvector-setup.sql:/docker-entrypoint-initdb.d/02-pgvector.sql
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=twinforge
+      - DOCKER_INFLUXDB_INIT_BUCKET=twinforge_sensors
+    volumes:
+      - influx-data:/var/lib/influxdb2
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  # ============================================================
+  # Security Layer
+  # ============================================================
+
+  vault:
+    image: hashicorp/vault:1.15
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_ROOT_TOKEN}
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+      - ./infrastructure/vault/config.hcl:/vault/config/vault.hcl
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  # ============================================================
+  # Observability Stack
+  # ============================================================
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./infrastructure/observability/otel-config.yaml:/etc/otel/config.yaml
+    command: ["--config=/etc/otel/config.yaml"]
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+      - ./infrastructure/observability/loki-config.yaml:/etc/loki/local-config.yaml
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infrastructure/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - twinforge-net
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  postgres-data:
+  influx-data:
+  vault-data:
+  loki-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  twinforge-net:
+    driver: bridge

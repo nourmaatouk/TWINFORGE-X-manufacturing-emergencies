@@ -1,0 +1,87 @@
+# ═══════════════════════════════════════════════════════════════
+# Agent 3: Data/IoT Executor — Local Development Stack
+# Standalone docker-compose for Agent 3 + dependencies
+# ═══════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+services:
+
+  # ── Agent 3 ────────────────────────────────────────────────
+  agent-data-iot:
+    build:
+      context: ../../
+      dockerfile: services/agent-data-iot/Dockerfile
+    container_name: agent-data-iot
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env.example
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - MQTT_BROKER_HOST=mqtt-broker
+    depends_on:
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+      mqtt-broker:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - twinforge-net
+
+  # ── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: twinforge-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - twinforge-net
+
+  # ── InfluxDB ───────────────────────────────────────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: twinforge-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=twinforge
+      - DOCKER_INFLUXDB_INIT_BUCKET=twinforge_sensors
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-token
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    restart: unless-stopped
+    networks:
+      - twinforge-net
+
+  # ── MQTT Broker ────────────────────────────────────────────
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: twinforge-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+    networks:
+      - twinforge-net
+
+volumes:
+  influxdb-data:
+
+networks:
+  twinforge-net:
+    driver: bridge

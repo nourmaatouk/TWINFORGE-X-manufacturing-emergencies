@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "agent-conversation"
+    static_configs:
+      - targets: ["agent-conversation:8001"]
+  - job_name: "agent-orchestrator"
+    static_configs:
+      - targets: ["agent-orchestrator:8002"]
+  - job_name: "agent-data-iot"
+    static_configs:
+      - targets: ["agent-data-iot:8003"]
+  - job_name: "agent-verifier"
+    static_configs:
+      - targets: ["agent-verifier:8004"]
+  - job_name: "agent-security"
+    static_configs:
+      - targets: ["agent-security:8005"]
+  - job_name: "langgraph-orchestrator"
+    static_configs:
+      - targets: ["langgraph-orchestrator:8000"]

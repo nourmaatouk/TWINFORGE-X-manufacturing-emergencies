@@ -1,0 +1,36 @@
+# ─── Agent 3: Data/IoT Executor ─────────────────────────────────────────────
+# Production dependencies
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+websockets==14.1
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# MQTT
+paho-mqtt==2.1.0
+
+# Redis
+redis[hiredis]==5.2.1
+
+# InfluxDB
+influxdb-client==1.48.0
+
+# HTTP client
+httpx==0.28.1
+
+# Observability
+prometheus-client==0.21.1
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-exporter-otlp-proto-grpc==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0
+
+# Data processing
+numpy==2.2.2
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.2
+pytest-cov==6.0.0
